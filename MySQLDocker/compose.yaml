@@ -1,5 +1,3 @@
-version: '3.1'
-
 services:
   db:
     image: mysql
@@ -9,3 +7,27 @@ services:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
     ports:
       - "3306:3306"
+    volumes:
+      - ${MYSQL_VOLUME}:/var/lib/mysql
+
+  migrate:
+    image: alpine
+    container_name: ${MIGRATION_CONTAINER_NAME}
+    depends_on:
+      - db
+    volumes:
+      - ./migrations:/migrations
+      - ./migrate.sh:/migrate.sh
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    entrypoint:
+      - /bin/sh
+      - -c
+      - "sh /migrate.sh -h db
+        -m /migrations
+        -u ${MYSQL_USER}
+        -r ${MYSQL_ROOT_PASSWORD}
+        -p ${MYSQL_PASSWORD}
+        -d ${MYSQL_DATABASE}"
