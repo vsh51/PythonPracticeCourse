@@ -1,12 +1,47 @@
 import matplotlib.pyplot as plt
+from enum import Enum
+
+class FinalsType(Enum):
+    EXAM = 0
+    CREDIT = 1
+    PROJECT = 2
+
+    @staticmethod
+    def to_string(ftype):
+        match ftype:
+            case FinalsType.EXAM:
+                return "exam"
+            case FinalsType.CREDIT:
+                return "credit"
+            case FinalsType.PROJECT:
+                return "project"
 
 class Discipline:
-    def __init__(self, name, gradesl):
+    def __init__(self, name, grades_wl, sgrade, ftype: FinalsType = FinalsType.EXAM, exgrade=0):
         self.name=name
-        self.grades_list=gradesl
+        self.grades_week_list=grades_wl
+        self.sum_grade=sgrade
+        self.exam_grade=exgrade
+        self.finals = ftype
 
-    def change_grades(self, new_grades):
-        self.grades_list = new_grades
+    def change_week_grades(self, new_grades):
+        self.grades_week_list = new_grades
+
+    def make_pie_chart(self):
+        plt.figure(num=1, figsize=(6, 6))
+
+        size=[self.sum_grade, 100-self.sum_grade-self.exam_grade, self.exam_grade]
+        colors = ['#ff9999', '#66b3ff', '#99ff99']
+
+        plt.pie(size, labels=["practice", "",  FinalsType.to_string(self.finals)], colors=colors,autopct='%1.1f',  startangle=90 )
+
+        plt.text(0, -1.1, f'Total: {self.sum_grade+self.exam_grade} / 100', ha='center', va='center', fontsize=12, color='black',fontweight='bold')
+        plt.title(self.name, fontsize=14)
+        plt.axis('equal')# співвідношення сторін осей (1=рівне)
+
+        plt.savefig(self.name+"_piechart.png")
+        plt.show()
+
 
 class DisciplinesList:
     def __init__(self, *disciplines):
@@ -27,9 +62,9 @@ class DisciplinesList:
         colours = [colormap(i) for i in range(len(self.disciplines_list))]
 
         for discip, c in zip(self.disciplines_list, colours):
-            if len(discip.grades_list) != len(days):
+            if len(discip.grades_week_list) != len(days):
                 raise ValueError(f"{discip.name} should have {len(days)} grades for each day of the week.")
-            plt.plot(days, discip.grades_list, color=c, label=discip.name)
+            plt.plot(days, discip.grades_week_list, color=c, label=discip.name)
 
 
         font1={'family':'serif','color':'darkred','size':15}
@@ -45,10 +80,13 @@ class DisciplinesList:
         plt.show()
 
 
-if __name__=="__main__":
-    d1=Discipline("Discrete mathematics", [2, 32, 53, 6, 7, 63, 3])
-    d2=Discipline("mathematical analysis", [4, 6, 42, 4, 4, 85, 9] )
-    d3=Discipline("English", [46, 16,12, 14, 24,54, 29])
+d1=Discipline("Discrete mathematics", [2, 32, 53, 6, 7, 63, 3], 47, FinalsType.CREDIT, 30)
+d2=Discipline("mathematical analysis", [4, 6, 42, 4, 4, 85, 9], 33 , FinalsType.EXAM, 26)
+d3=Discipline("English", [46, 16,12, 14, 24,54, 29],30, FinalsType.CREDIT, 14)
 
-    DisList=DisciplinesList(d1, d2, d3)
-    DisList.make_week_graph()
+DisList=DisciplinesList(d1, d2, d3)
+DisList.make_week_graph()
+
+d1.make_pie_chart()
+d2.make_pie_chart()
+d3.make_pie_chart()
