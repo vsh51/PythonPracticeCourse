@@ -8,8 +8,12 @@ def main():
         if sys.argv[1] == "test":
             loader = unittest.TestLoader()
             suite = loader.loadTestsFromModule(connect_test)
-            runner = unittest.TextTestRunner()
+            runner = unittest.TextTestRunner(verbosity=2)
             runner.run(suite)
+        else:
+            print("Usage: python -m SQLConnection test")
+    else:
+        print("Usage: python -m SQLConnection test")
 
 if __name__ == "__main__":
     main()
