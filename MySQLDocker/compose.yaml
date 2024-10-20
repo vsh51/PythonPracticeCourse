@@ -11,7 +11,7 @@ services:
       - ${MYSQL_VOLUME}:/var/lib/mysql
 
   migrate:
-    image: alpine
+    image: alpine:3.12
     container_name: ${MIGRATION_CONTAINER_NAME}
     depends_on:
       - db
