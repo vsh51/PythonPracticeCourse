@@ -1,1 +1,1 @@
-from SQLConnection.connection import DBError, SQLConnectionWrapper
+from SQLConnection.connection import DBError, SQLConnectionWrapper, PointType
