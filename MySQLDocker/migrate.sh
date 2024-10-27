@@ -32,7 +32,20 @@ done
 
 echo "======= MIGRATIONS STARTED ========"
 
-# Process each migration file
+# Define core database
+coredb="$migrations/core"
+migrations="$migrations/tables"
+
+# Create core database
+echo "Creating database $coredb"
+sed -e "s/\${MYSQL_DATABASE}/$database/g" \
+    -e "s/\${MYSQL_USER}/$user/g" \
+    -e "s/\${MYSQL_PASSWORD}/$password/g" \
+    "$coredb/db.sql" | mysql -h "$container" -u root -p"$root_password" || { 
+        echo "Migration failed for core.sql"; 
+    }
+
+# Process tables migrations
 for f in "$migrations"/*.sql; do
     echo "Processing migration $f"
 
