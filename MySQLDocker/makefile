@@ -6,6 +6,10 @@ db-up:
 db-down:
 	sudo docker compose down --volumes --rmi all
 
+db-down-rmi:
+	sudo make db-down
+	sudo rm -rf ${MYSQL_VOLUME}
+
 db-logs:
 	sudo docker compose logs -f
 
