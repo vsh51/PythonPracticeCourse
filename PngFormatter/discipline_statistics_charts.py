@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import os
 from enum import Enum
 
 class FinalsType(Enum):
@@ -27,41 +28,38 @@ class Discipline:
     def change_week_grades(self, new_grades):
         self.grades_week_list = new_grades
 
-    def make_pie_chart(self):
+class ChartMaker:
+    def __init__(self, output_directory="disciplines_graphs"):
+        self.output_directory = output_directory
+        os.makedirs(self.output_directory, exist_ok=True)
+
+    def make_pie_chart(self, discipline: Discipline):
+        plt.close()
         plt.figure(num=1, figsize=(6, 6))
 
-        size=[self.sum_grade, 100-self.sum_grade-self.exam_grade, self.exam_grade]
+        size = [discipline.sum_grade, 100 - discipline.sum_grade - discipline.exam_grade, discipline.exam_grade]
         colors = ['#ff9999', '#66b3ff', '#99ff99']
 
-        plt.pie(size, labels=["practice", "",  FinalsType.to_string(self.finals)], colors=colors,autopct='%1.1f',  startangle=90 )
+        plt.pie(size, labels=["practice", "", FinalsType.to_string(discipline.finals)], colors=colors, autopct='%1.1f',
+                startangle=90)
 
-        plt.text(0, -1.1, f'Total: {self.sum_grade+self.exam_grade} / 100', ha='center', va='center', fontsize=12, color='black',fontweight='bold')
-        plt.title(self.name, fontsize=14)
-        plt.axis('equal')# співвідношення сторін осей (1=рівне)
+        plt.text(0, -1.1, f'Total: {discipline.sum_grade + discipline.exam_grade} / 100', ha='center', va='center', fontsize=12,
+                 color='black', fontweight='bold')
+        plt.title(discipline.name, fontsize=14)
+        plt.axis('equal')  # співвідношення сторін осей (1=рівне)
+        output_directory = "disciplines_graphs"
+        plt.savefig(os.path.join(output_directory, discipline.name + "_piechart.png"))
 
-        plt.savefig(self.name+"_piechart.png")
-        plt.show()
 
-
-class DisciplinesList:
-    def __init__(self, *disciplines):
-        self.disciplines_list = list(disciplines)
-
-    def add(self, discip):
-        self.disciplines_list.append(discip)
-
-    def remove(self, discip):
-        self.disciplines_list.remove(discip)
-
-    def make_week_graph(self):
+    def make_week_graph(self, desciplinelist: list):
         plt.close()
         plt.figure(figsize=(10, 6))
 
         days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-        colormap = plt.get_cmap('viridis', len(self.disciplines_list))
-        colours = [colormap(i) for i in range(len(self.disciplines_list))]
+        colormap = plt.get_cmap('viridis', len(desciplinelist))
+        colours = [colormap(i) for i in range(len(desciplinelist))]
 
-        for discip, c in zip(self.disciplines_list, colours):
+        for discip, c in zip(desciplinelist, colours):
             if len(discip.grades_week_list) != len(days):
                 raise ValueError(f"{discip.name} should have {len(days)} grades for each day of the week.")
             plt.plot(days, discip.grades_week_list, color=c, label=discip.name)
@@ -75,18 +73,6 @@ class DisciplinesList:
 
         plt.legend()
         plt.ylim(0, 100)
+        output_directory="disciplines_graphs"
+        plt.savefig(os.path.join(output_directory, 'weekly_discipline_overview.png'))
 
-        plt.savefig('output.png')
-        plt.show()
-
-
-d1=Discipline("Discrete mathematics", [2, 32, 53, 6, 7, 63, 3], 47, FinalsType.CREDIT, 30)
-d2=Discipline("mathematical analysis", [4, 6, 42, 4, 4, 85, 9], 33 , FinalsType.EXAM, 26)
-d3=Discipline("English", [46, 16,12, 14, 24,54, 29],30, FinalsType.CREDIT, 14)
-
-DisList=DisciplinesList(d1, d2, d3)
-DisList.make_week_graph()
-
-d1.make_pie_chart()
-d2.make_pie_chart()
-d3.make_pie_chart()
