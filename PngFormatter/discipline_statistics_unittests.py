@@ -2,7 +2,7 @@ import matplotlib
 matplotlib.use('Agg')
 import unittest
 import matplotlib.pyplot as plt
-from telebot_graph import Discipline, DisciplinesList
+from discipline_statistics_charts import Discipline, DisciplinesList
 
 
 class TestWeekGraph(unittest.TestCase):
