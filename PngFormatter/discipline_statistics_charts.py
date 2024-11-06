@@ -18,10 +18,10 @@ class FinalsType(Enum):
                 return "project"
 
 class Discipline:
-    def __init__(self, name, grades_wl, sgrade, ftype: FinalsType = FinalsType.EXAM, exgrade=0):
+    def __init__(self, name, grades_weekl, sumgrade, ftype: FinalsType = FinalsType.EXAM, exgrade=0):
         self.name=name
-        self.grades_week_list=grades_wl
-        self.sum_grade=sgrade
+        self.grades_week_list=grades_weekl
+        self.sum_grade=sumgrade
         self.exam_grade=exgrade
         self.finals = ftype
 
