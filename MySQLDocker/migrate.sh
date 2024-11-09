@@ -22,6 +22,9 @@ echo "Database: $database"
 # Check for mysql-client and install if not present
 echo "Installing mysql client on alpine..."
 apk add --no-cache mysql-client
+
+# Check for mariadb-connector-c-dev and install if not present
+echo "Installing mariadb-connector-c-dev on alpine..."
 apk add --no-cache mariadb-connector-c-dev
 
 # Wait for MySQL to start

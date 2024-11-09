@@ -3,6 +3,8 @@ import PngFormatter.discipline_statistics_charts as dsc
 import SQLConnection
 import os
 
+from datetime import datetime
+
 import signal
 import sys
 
@@ -77,7 +79,11 @@ def process_grade_input(message):
             raise Exception("Your grade must be between 0 and 100.")
 
         bot.reply_to(message, f"Grade {grade} for {discipline_name} ({grade_type}) submitted successfully!")
-        database.create_point(message.from_user.id, discipline_name, SQLConnection.PointType.from_string(gtype[grade_type]), grade)
+        database.create_point(message.from_user.id,
+                              discipline_name,
+                              SQLConnection.PointType.from_string(gtype[grade_type]),
+                              grade,
+                              datetime.fromtimestamp(message.date).strftime('%Y-%m-%d %H:%M:%S'))
 
     except ValueError:
         bot.reply_to(message, "You entered an invalid grade. Please enter a numeric value between 0 and 100.")
@@ -133,12 +139,12 @@ def discipline_to_show_list_input(message):
             
             header = f"Grades for {discipline_name}:"
             if grades_list['points']['lecture']:
-                lectures = f"Lecture: {', '.join(map(str, grades_list['points']['lecture']))}"
+                lectures = f"Lecture: {', '.join(map(str, [e['value'] for e in grades_list['points']['lecture']]))}"
             else:
                 lectures = "Lecture: 0"
 
             if grades_list['points']['practice']:
-                practice = f"Practice: {', '.join(map(str, grades_list['points']['practice']))}"
+                practice = f"Practice: {', '.join(map(str, [e['value'] for e in grades_list['points']['practice']]))}"
             else:
                 practice = "Practice: 0"
 

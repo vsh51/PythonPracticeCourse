@@ -135,6 +135,20 @@ class SQLConnectionWrapper:
             raise DBError(f"Error: {err}")
 
 
+    def get_disciplines(self, telegram_id):
+        user = self.get_user_by_telegram_id(telegram_id)
+        self.cursor.execute(
+            "SELECT name \
+            FROM disciplines WHERE user_id = %s",
+            (user["id"],)
+        )
+        try:
+            raw_disciplines: Any = self.cursor.fetchall()
+            return [raw_discipline[0] for raw_discipline in raw_disciplines]
+        except mysql.connector.Error as err:
+            raise DBError(f"Error: {err}")
+
+
     def get_discipline_by_name(self, telegram_id, discipline_name):
         if not self.discipline_exists(telegram_id, discipline_name):
             raise DBError(f"Discipline {discipline_name} does not exist")
@@ -190,11 +204,11 @@ class SQLConnectionWrapper:
             raise DBError(f"Error {err}")
 
 
-    def create_point(self, telegram_id, discipline_name, point_type: PointType, points):
+    def create_point(self, telegram_id, discipline_name, point_type: PointType, points, created_at):
         discipline_id = self.get_discipline_by_name(telegram_id, discipline_name)["id"]
         self.cursor.execute(
-            "INSERT INTO points (discipline_id, type, points) VALUES (%s, %s, %s)",
-            (discipline_id, str(point_type), points)
+            "INSERT INTO points (discipline_id, type, points, created_at) VALUES (%s, %s, %s, %s)",
+            (discipline_id, str(point_type), points, created_at)
         )
         try:
             self.connection.commit()
@@ -207,7 +221,7 @@ class SQLConnectionWrapper:
         discipline = self.get_discipline_by_name(telegram_id, discipline_name)
 
         self.cursor.execute(
-            "SELECT type, points \
+            "SELECT type, points, points.created_at \
             FROM disciplines \
             JOIN points ON disciplines.id = points.discipline_id \
             WHERE user_id = %s AND name = %s",
@@ -221,8 +235,12 @@ class SQLConnectionWrapper:
                 "lecture_total_points": discipline["lecture_total_points"],
                 "practice_total_points": discipline["practice_total_points"],
                 "points": {
-                    str(PointType.LECTURE): [raw_point[1] for raw_point in raw_points if raw_point[0] == "lecture"],
-                    str(PointType.PRACTICE): [raw_point[1] for raw_point in raw_points if raw_point[0] == "practice"]
+                    str(PointType.LECTURE): [
+                        ({'value': raw_point[1], 'time': raw_point[2]})
+                        for raw_point in raw_points if raw_point[0] == "lecture"],
+                    str(PointType.PRACTICE): [
+                        {'value': raw_point[1], 'time': raw_point[2]}
+                        for raw_point in raw_points if raw_point[0] == "practice"]
                 }
             }
         except mysql.connector.Error as err:
