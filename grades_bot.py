@@ -18,11 +18,10 @@ database=SQLConnection.SQLConnectionWrapper(
      os.environ.get('MYSQL_DATABASE')
 ).__enter__()
 
+
 TOKEN = os.environ.get('TOKEN')
 bot = telebot.TeleBot(str(TOKEN))
 
-discipline_names=[]
-disciplines={}
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
