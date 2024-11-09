@@ -141,7 +141,7 @@ class SQLConnectionWrapper:
 
         user_id = self.get_user_by_telegram_id(telegram_id)["id"]
         self.cursor.execute(
-            "SELECT * FROM disciplines WHERE user_id = %s AND name = %s",
+            "SELECT * FROM disciplines WHERE user_id = %s AND name = %s LIMIT 1",
             (user_id, discipline_name)
         )
         try:
@@ -175,6 +175,19 @@ class SQLConnectionWrapper:
             self.connection.commit()
         except mysql.connector.Error as err:
             raise DBError(f"Error: {err}")
+
+
+    def get_disciplines_list(self, telegram_id):
+        user = self.get_user_by_telegram_id(telegram_id)
+        self.cursor.execute(
+            "SELECT name FROM disciplines WHERE user_id = %s",
+            (user["id"],)
+        )
+        try:
+            raw_disciplines: Any = self.cursor.fetchall()
+            return [raw_discipline[0] for raw_discipline in raw_disciplines]
+        except mysql.connector.Error as err:
+            raise DBError(f"Error {err}")
 
 
     def create_point(self, telegram_id, discipline_name, point_type: PointType, points):
@@ -212,5 +225,54 @@ class SQLConnectionWrapper:
                     str(PointType.PRACTICE): [raw_point[1] for raw_point in raw_points if raw_point[0] == "practice"]
                 }
             }
+        except mysql.connector.Error as err:
+            raise DBError(f"Error: {err}")
+
+
+    def remove_last_point(self, telegram_id, discipline_name) -> float:
+        user = self.get_user_by_telegram_id(telegram_id)
+
+        self.cursor.execute(
+            "SELECT id, created_at, points FROM points WHERE discipline_id = \
+            (SELECT id FROM disciplines WHERE user_id = %s AND name = %s) \
+            ORDER BY created_at DESC LIMIT 1",
+            (user["id"], discipline_name)
+        )
+        try:
+            point_id: Any = self.cursor.fetchone()
+            removed_points = point_id[2]
+            if point_id is None:
+                raise DBError(f"No points found for discipline {discipline_name}")
+            else:
+                self.cursor.execute("DELETE FROM points WHERE id = %s", (point_id[0],))
+                self.connection.commit()
+                return removed_points
+        except mysql.connector.Error as err:
+            raise DBError(f"Error: {err}")
+
+
+    def points_exist(self, telegram_id, discipline_name):
+        user = self.get_user_by_telegram_id(telegram_id)
+
+        self.cursor.execute(
+            "SELECT * FROM points WHERE discipline_id = \
+            (SELECT id FROM disciplines WHERE user_id = %s AND name = %s) LIMIT 1",
+            (user["id"], discipline_name)
+        )
+        try:
+            return self.cursor.fetchone() is not None
+        except mysql.connector.Error as err:
+            raise DBError(f"Error: {err}")
+
+
+    def get_users_disciplines(self, telegram_id):
+        user = self.get_user_by_telegram_id(telegram_id)
+
+        try:
+            disciplines = self.get_disciplines_list(telegram_id)
+            dscs = {}
+            for discipline in disciplines:
+                dscs[discipline] = self.get_points_by_discipline(telegram_id, discipline)
+            return dscs
         except mysql.connector.Error as err:
             raise DBError(f"Error: {err}")

@@ -1,5 +1,3 @@
-.venv/
-.idea/
-__pycache__/
-disciplines_graphs/
+.env
+.venv
 pyrightconfig.json
