@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS `${MYSQL_DATABASE}`.`disciplines` (
     `name` VARCHAR(255) NOT NULL,
     `lecture_total_points` INT NOT NULL,
     `practice_total_points` INT NOT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (`user_id`) REFERENCES `users`(`id`)
 );
 
@@ -23,5 +24,6 @@ CREATE TABLE IF NOT EXISTS `${MYSQL_DATABASE}`.`points` (
     `discipline_id` INT NOT NULL,
     `type` ENUM('lecture', 'practice') NOT NULL,
     `points` INT NOT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (`discipline_id`) REFERENCES `disciplines`(`id`)
 );

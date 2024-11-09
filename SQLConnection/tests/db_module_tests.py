@@ -1,3 +1,4 @@
+import datetime
 from SQLConnection.connection import SQLConnectionWrapper, PointType
 
 import unittest
@@ -77,37 +78,50 @@ class TestPointsTable(unittest.TestCase):
 
 
     def test_create_multiple_points(self):
-        self.connection.create_point(self.tg_id, "Math", PointType.LECTURE, 3)
-        self.connection.create_point(self.tg_id, "Math", PointType.LECTURE, 4)
-        self.connection.create_point(self.tg_id, "Math", PointType.PRACTICE, 5)
-        self.connection.create_point(self.tg_id, "Physics", PointType.LECTURE, 3)
-        self.connection.create_point(self.tg_id, "Physics", PointType.PRACTICE, 5)
-        self.connection.create_point(self.tg_id, "Physics", PointType.PRACTICE, 5)
-        self.assertEqual(
-            self.connection.get_points_by_discipline(self.tg_id, "Math"),
-            {
-                "user_id": self.connection.get_user_by_telegram_id(self.tg_id)["id"],
-                "discipline": "Math",
-                "lecture_total_points": 50,
-                "practice_total_points": 50,
-                "points": {
-                    str(PointType.LECTURE): [3, 4],
-                    str(PointType.PRACTICE): [5]
-                }
+        def remove_microseconds(dt):
+            return dt.replace(microsecond=0)
+
+        timestamp = remove_microseconds(datetime.datetime.now())
+
+        self.connection.create_point(self.tg_id, "Math", PointType.LECTURE, 3, timestamp)
+        self.connection.create_point(self.tg_id, "Math", PointType.LECTURE, 4, timestamp)
+        self.connection.create_point(self.tg_id, "Math", PointType.PRACTICE, 5, timestamp)
+        self.connection.create_point(self.tg_id, "Physics", PointType.LECTURE, 3, timestamp)
+        self.connection.create_point(self.tg_id, "Physics", PointType.PRACTICE, 5, timestamp)
+        self.connection.create_point(self.tg_id, "Physics", PointType.PRACTICE, 5, timestamp)
+
+        data = self.connection.get_points_by_discipline(self.tg_id, "Math")
+        expected = {
+            "user_id": self.connection.get_user_by_telegram_id(self.tg_id)["id"],
+            "discipline": "Math",
+            "lecture_total_points": 50,
+            "practice_total_points": 50,
+            "points": {
+                str(PointType.LECTURE): [{'value': 3, 'time': timestamp}, {'value': 4, 'time': timestamp}],
+                str(PointType.PRACTICE): [{'value': 5, 'time': timestamp}]
             }
+        }
+
+        self.assertEqual(
+            data,
+            expected
         )
-        self.assertEqual(
-            self.connection.get_points_by_discipline(self.tg_id, "Physics"),
-            {
-                "user_id": self.connection.get_user_by_telegram_id(self.tg_id)["id"],
-                "discipline": "Physics",
-                "lecture_total_points": 50,
-                "practice_total_points": 70,
-                "points": {
-                    str(PointType.LECTURE): [3],
-                    str(PointType.PRACTICE): [5, 5]
-                }
+
+        data = self.connection.get_points_by_discipline(self.tg_id, "Physics")
+        expected = {
+            "user_id": self.connection.get_user_by_telegram_id(self.tg_id)["id"],
+            "discipline": "Physics",
+            "lecture_total_points": 50,
+            "practice_total_points": 70,
+            "points": {
+                str(PointType.LECTURE): [{'value': 3, 'time': timestamp}],
+                str(PointType.PRACTICE): [{'value': 5, 'time': timestamp}, {'value': 5, 'time': timestamp}]
             }
+        }
+
+        self.assertEqual(
+            data,
+            expected
         )
 
 
