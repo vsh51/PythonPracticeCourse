@@ -288,6 +288,24 @@ def process_compare_discipline_input(message):
         bot.register_next_step_handler(message, process_compare_discipline_input)
 
 
+@bot.message_handler(commands=['delete_account'])
+def delete_account(message):
+    bot.reply_to(message, "Are you sure you want to delete your account? (yes/no)")
+    bot.register_next_step_handler(message, delete_account_confirm)
+
+def delete_account_confirm(message):
+    if message.text.lower() == 'yes':
+        if not database.user_exists(message.from_user.id):
+            bot.reply_to(message, "You do not have an account.")
+            return
+        database.delete_user(message.from_user.id)
+        bot.reply_to(message, "Your account has been successfully deleted.")
+    elif message.text.lower() == 'no':
+        bot.reply_to(message, "Your account has not been deleted.")
+    else:
+        bot.reply_to(message, "Invalid input. Please enter 'yes' or 'no'.")
+
+
 if __name__ == "__main__":
     def signal_handler(sig, frame):
         database.__exit__(None, None, None)
