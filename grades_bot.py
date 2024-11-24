@@ -3,7 +3,7 @@ import PngFormatter.discipline_statistics_charts as dsc
 import SQLConnection
 import os
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import signal
 import sys
@@ -21,7 +21,6 @@ database=SQLConnection.SQLConnectionWrapper(
 
 TOKEN = os.environ.get('TOKEN')
 bot = telebot.TeleBot(str(TOKEN))
-
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
@@ -207,26 +206,25 @@ def show_disciplines_list(message):
     else:
         bot.reply_to(message, f"Your disciplines: {', '.join(database.get_disciplines_list(message.from_user.id))}")
 
-
-@bot.message_handler(commands=['discipline_chart'])
+@bot.message_handler(commands=['disciplines_statistic'])
 def show_discipline_chart(message):
-    bot.reply_to(message, "Please enter the discipline_name (use _ instead spaces)")
-    bot.register_next_step_handler(message, discipline_to_shoe_chart)
+    bot.reply_to(message, "Please enter the names of the disciplines (use _ instead spaces)")
+    bot.register_next_step_handler(message, discipline_to_show_chart)
 
-def discipline_to_shoe_chart(message):
+def discipline_to_show_chart(message):
     try:
         command_list = message.text.split()
         if len(command_list) != 1:
             raise Exception("Invalid format. It must be like: discipline")
 
         dis_name = command_list
-        if dis_name not in disciplines:
+        if dis_name not in disciplines:                                 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             raise Exception("The discipline is not listed")
 
-        if len(disciplines) == 0:
+        if len(disciplines) == 0:                                       #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             bot.reply_to(message, "You have no data to make chart")
         else:
-            discip1 = dsc.Discipline(dis_name, 13, 43)
+            discip1 = dsc.Discipline(dis_name, 13, 43)   #!!!!!!!!!!!!!!!!!!!!
             ch = dsc.ChartMaker()
             ch.make_pie_chart(discip1)
             output_directory = f"{dis_name}_piechart.png"
@@ -235,6 +233,54 @@ def discipline_to_shoe_chart(message):
 
     except Exception as e:
         bot.reply_to(message, str(e))
+
+
+@bot.message_handler(commands=['compare_discipline'])
+def compare_discipline_handler(message):
+    bot.reply_to(message, "Please enter the number of last days and the discipline. Example: '7 Math'")
+    bot.register_next_step_handler(message, process_compare_discipline_input)
+
+def process_compare_discipline_input(message):
+    try:
+        input_data = message.text.split()
+
+        if len(input_data) != 2:
+            raise Exception("Invalid format. Please provide number_of_days and one discipline.")
+
+        number_of_days = int(input_data[0])
+        discipline_name = input_data[1]
+
+        if not database.discipline_exists(message.from_user.id, discipline_name):
+            raise Exception(
+                f"The discipline {discipline_name} does not exist in your list. Add discipline using /add_discipline")
+
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=number_of_days)
+
+        grades = database.get_grades_for_discipline_in_range(message.from_user.id, discipline_name, start_date,
+                                                             end_date)
+        if not grades:
+            bot.reply_to(message, "No grades found for the selected discipline in the given date range.")
+            return
+
+        grade_values = [grade[0] for grade in grades]
+        dates=[grade[1] for grade in grades]
+        grades_list=[dsc.Grade(grade_values[i], dates[i]) for i in range(len(grades))]
+        discipline = dsc.Discipline(discipline_name, grades_list, sum(grade_values))
+
+        chart_maker = dsc.ChartMaker()
+        chart_maker.make_week_graph(discipline, start_date, end_date)
+
+        bot.reply_to(message,
+                     f"Here is the progress of your discipline '{discipline_name}' over the last {number_of_days} days.")
+        output_directory = f"disciplines_graphs/grades_comparison_{discipline_name}_{start_date.date()}_to_{end_date.date()}.png"
+
+        with open(output_directory, 'rb') as photo:
+            bot.send_photo(message.chat.id, photo)
+
+    except Exception as e:
+        bot.reply_to(message, f"Error: {str(e)}")
+        bot.register_next_step_handler(message, process_compare_discipline_input)
 
 
 if __name__ == "__main__":

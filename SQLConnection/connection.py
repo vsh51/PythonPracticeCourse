@@ -134,7 +134,6 @@ class SQLConnectionWrapper:
         except mysql.connector.Error as err:
             raise DBError(f"Error: {err}")
 
-
     def get_disciplines(self, telegram_id):
         user = self.get_user_by_telegram_id(telegram_id)
         self.cursor.execute(

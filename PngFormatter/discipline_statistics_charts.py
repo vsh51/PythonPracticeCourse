@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 import os
 from enum import Enum
+from datetime import datetime, timedelta
+
 
 class FinalsType(Enum):
     EXAM = 0
@@ -16,17 +18,21 @@ class FinalsType(Enum):
                 return "credit"
             case FinalsType.PROJECT:
                 return "project"
+class Grade:
+    def __init__(self, grade, time):
+        self.grade=grade
+        self.time_added=time
 
 class Discipline:
-    def __init__(self, name, grades_weekl, sumgrade, ftype: FinalsType = FinalsType.EXAM, exgrade=0):
+    def __init__(self, name, grades_list, sumgrade, ftype: FinalsType = FinalsType.EXAM, exgrade=0):
         self.name=name
-        self.grades_week_list=grades_weekl
+        self.grades_list=grades_list
         self.sum_grade=sumgrade
         self.exam_grade=exgrade
         self.finals = ftype
 
     def change_week_grades(self, new_grades):
-        self.grades_week_list = new_grades
+        self.grades_list = new_grades
 
 class ChartMaker:
     def __init__(self, output_directory="disciplines_graphs"):
@@ -50,29 +56,24 @@ class ChartMaker:
         output_directory = "disciplines_graphs"
         plt.savefig(os.path.join(output_directory, discipline.name + "_piechart.png"))
 
-
-    def make_week_graph(self, desciplinelist: list):
+    def make_week_graph(self, discipline, start_date, end_date):
         plt.close()
         plt.figure(figsize=(10, 6))
 
-        days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-        colormap = plt.get_cmap('viridis', len(desciplinelist))
-        colours = [colormap(i) for i in range(len(desciplinelist))]
+        date_labels = [date.time_added for date in discipline.grades_list]
+        grades_list = [date.grade for date in discipline.grades_list]
 
-        for discip, c in zip(desciplinelist, colours):
-            if len(discip.grades_week_list) != len(days):
-                raise ValueError(f"{discip.name} should have {len(days)} grades for each day of the week.")
-            plt.plot(days, discip.grades_week_list, color=c, label=discip.name)
+        if len(discipline.grades_list) > 0:
+            plt.plot(date_labels, grades_list, color='blue', label=discipline.name)
 
-
-        font1={'family':'serif','color':'darkred','size':15}
-        font2={'family':'serif','color':'darkred','size':20}
-        plt.title("Grades over the week", fontdict = font2)
-        plt.ylabel("Grades", fontdict = font1)
-        plt.xlabel("Days of the week", fontdict = font1)
-
+        plt.title(f"Progress of {discipline.name} from {start_date.date()} to {end_date.date()}")
+        plt.xlabel("Dates (with time)")
+        plt.ylabel("Grades")
+        plt.xticks(rotation=45)  # Поворот дат на осі X
         plt.legend()
-        plt.ylim(0, 100)
-        output_directory="disciplines_graphs"
-        plt.savefig(os.path.join(output_directory, 'weekly_discipline_overview.png'))
+        plt.tight_layout()
 
+        output_directory = f"{self.output_directory}/grades_comparison_{discipline.name}_{start_date.date()}_to_{end_date.date()}.png"
+        plt.savefig(output_directory)
+
+        return output_directory
