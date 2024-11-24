@@ -2,6 +2,8 @@ from typing import Any
 import mysql.connector
 from enum import Enum
 
+from telebot import datetime
+
 class DBError(Exception):
     def __init__(self, message):
         self.message = message
@@ -278,6 +280,37 @@ class SQLConnectionWrapper:
         )
         try:
             return self.cursor.fetchone() is not None
+        except mysql.connector.Error as err:
+            raise DBError(f"Error: {err}")
+
+
+    def get_points_for_discipline_in_range(self, telegram_id, discipline_name, start_date:datetime, end_date:datetime):
+        user = self.get_user_by_telegram_id(telegram_id)
+        discipline = self.get_discipline_by_name(telegram_id, discipline_name)
+
+        self.cursor.execute(
+            "SELECT type, points, points.created_at \
+            FROM disciplines \
+            JOIN points ON disciplines.id = points.discipline_id \
+            WHERE user_id = %s AND name = %s AND points.created_at BETWEEN %s AND %s",
+            (user["id"], discipline_name, start_date, end_date)
+        )
+        try:
+            raw_points: Any = self.cursor.fetchall()
+            return {
+                "user_id": user["id"],
+                "discipline": discipline_name,
+                "lecture_total_points": discipline["lecture_total_points"],
+                "practice_total_points": discipline["practice_total_points"],
+                "points": {
+                    str(PointType.LECTURE): [
+                        ({'value': raw_point[1], 'time': raw_point[2]})
+                        for raw_point in raw_points if raw_point[0] == "lecture"],
+                    str(PointType.PRACTICE): [
+                        {'value': raw_point[1], 'time': raw_point[2]}
+                        for raw_point in raw_points if raw_point[0] == "practice"]
+                }
+            }
         except mysql.connector.Error as err:
             raise DBError(f"Error: {err}")
 

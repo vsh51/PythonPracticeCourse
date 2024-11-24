@@ -2,7 +2,6 @@ import telebot
 import PngFormatter.discipline_statistics_charts as dsc
 import SQLConnection
 import os
-
 from datetime import datetime, timedelta
 
 import signal
@@ -47,7 +46,8 @@ def send_help(message):
         "/submit_grade - Add a grade for the selected discipline\n"
         "/remove_grade - Remove the last grade of the discipline\n"
         "/show_grades_list - Show the list of grades for the selected discipline\n"
-        "/discipline_chart - Display the grade chart for the discipline\n"
+        "/discipline_statistic - Show the pie chart of the selected discipline\n"
+        "/last_n_days_chart - Show the chart of the discipline progress over the last n days\n"
     )
     bot.reply_to(message, reply_message)
 
@@ -75,6 +75,13 @@ def process_grade_input(message):
             raise Exception("Invalid grade type. It must be either 'p' (practice) or 'l' (lecture).")
         if grade < 0 or grade > 100:
             raise Exception("Your grade must be between 0 and 100.")
+
+        pints = database.get_points_by_discipline(message.from_user.id, discipline_name)
+
+        if pints["practice_total_points"] < sum([e['value'] for e in pints['points']['practice']]) + grade and grade_type == 'p':
+            raise Exception("You have reached the maximum number of points for practice")
+        if pints["lecture_total_points"] < sum([e['value'] for e in pints['points']['lecture']]) + grade and grade_type == 'l':
+            raise Exception("You have reached the maximum number of points for lecture")
 
         bot.reply_to(message, f"Grade {grade} for {discipline_name} ({grade_type}) submitted successfully!")
         database.create_point(message.from_user.id,
@@ -206,9 +213,10 @@ def show_disciplines_list(message):
     else:
         bot.reply_to(message, f"Your disciplines: {', '.join(database.get_disciplines_list(message.from_user.id))}")
 
-@bot.message_handler(commands=['disciplines_statistic'])
+
+@bot.message_handler(commands=['discipline_statistic'])
 def show_discipline_chart(message):
-    bot.reply_to(message, "Please enter the names of the disciplines (use _ instead spaces)")
+    bot.reply_to(message, "Please enter the names of the discipline (use _ instead spaces)")
     bot.register_next_step_handler(message, discipline_to_show_chart)
 
 def discipline_to_show_chart(message):
@@ -217,26 +225,27 @@ def discipline_to_show_chart(message):
         if len(command_list) != 1:
             raise Exception("Invalid format. It must be like: discipline")
 
-        dis_name = command_list
-        if dis_name not in disciplines:                                 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        dis_name = command_list[0]
+        if not database.discipline_exists(message.from_user.id, dis_name):
             raise Exception("The discipline is not listed")
 
-        if len(disciplines) == 0:                                       #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        if not database.points_exist(message.from_user.id, dis_name):
             bot.reply_to(message, "You have no data to make chart")
         else:
-            discip1 = dsc.Discipline(dis_name, 13, 43)   #!!!!!!!!!!!!!!!!!!!!
+            points = database.get_points_by_discipline(message.from_user.id, dis_name)
+            discip1 = dsc.Discipline(points)
             ch = dsc.ChartMaker()
-            ch.make_pie_chart(discip1)
-            output_directory = f"{dis_name}_piechart.png"
-            with open(output_directory, 'rb') as photo:
+            filename = ch.make_pie_chart(discip1)
+            with open(filename, 'rb') as photo:
                 bot.send_photo(message.chat.id, photo)
+            os.remove(filename)
 
     except Exception as e:
         bot.reply_to(message, str(e))
 
 
-@bot.message_handler(commands=['compare_discipline'])
-def compare_discipline_handler(message):
+@bot.message_handler(commands=['last_n_days_chart'])
+def n_days_chart(message):
     bot.reply_to(message, "Please enter the number of last days and the discipline. Example: '7 Math'")
     bot.register_next_step_handler(message, process_compare_discipline_input)
 
@@ -257,26 +266,22 @@ def process_compare_discipline_input(message):
         end_date = datetime.now()
         start_date = end_date - timedelta(days=number_of_days)
 
-        grades = database.get_grades_for_discipline_in_range(message.from_user.id, discipline_name, start_date,
+        grades = database.get_points_for_discipline_in_range(message.from_user.id, discipline_name, start_date,
                                                              end_date)
         if not grades:
             bot.reply_to(message, "No grades found for the selected discipline in the given date range.")
             return
 
-        grade_values = [grade[0] for grade in grades]
-        dates=[grade[1] for grade in grades]
-        grades_list=[dsc.Grade(grade_values[i], dates[i]) for i in range(len(grades))]
-        discipline = dsc.Discipline(discipline_name, grades_list, sum(grade_values))
-
+        discipline = dsc.Discipline(grades)
         chart_maker = dsc.ChartMaker()
-        chart_maker.make_week_graph(discipline, start_date, end_date)
-
+        filename = chart_maker.make_n_days_chart(discipline, start_date, end_date)
+    
         bot.reply_to(message,
                      f"Here is the progress of your discipline '{discipline_name}' over the last {number_of_days} days.")
-        output_directory = f"disciplines_graphs/grades_comparison_{discipline_name}_{start_date.date()}_to_{end_date.date()}.png"
 
-        with open(output_directory, 'rb') as photo:
+        with open(filename, 'rb') as photo:
             bot.send_photo(message.chat.id, photo)
+        os.remove(filename)
 
     except Exception as e:
         bot.reply_to(message, f"Error: {str(e)}")

@@ -118,6 +118,16 @@ class TestPointsTable(unittest.TestCase):
                 str(PointType.PRACTICE): [{'value': 5, 'time': timestamp}, {'value': 5, 'time': timestamp}]
             }
         }
+        
+        self.assertEqual(
+            data,
+            expected
+        )
+
+        start = timestamp - datetime.timedelta(days=1)
+        end = timestamp + datetime.timedelta(days=1)
+
+        data = self.connection.get_points_for_discipline_in_range(self.tg_id, "Physics", start, end)
 
         self.assertEqual(
             data,
