@@ -48,6 +48,7 @@ def send_help(message):
         "/show_grades_list - Show the list of grades for the selected discipline\n"
         "/discipline_statistic - Show the pie chart of the selected discipline\n"
         "/last_n_days_chart - Show the chart of the discipline progress over the last n days\n"
+        "/delete_account - Delete your account\n"
     )
     bot.reply_to(message, reply_message)
 
