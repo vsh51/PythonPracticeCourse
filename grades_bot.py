@@ -1,9 +1,10 @@
+import requests
 import telebot
 import PngFormatter.discipline_statistics_charts as dsc
 import SQLConnection
 import os
 from datetime import datetime, timedelta
-
+import requests
 import signal
 import sys
 
@@ -305,6 +306,24 @@ def delete_account_confirm(message):
         bot.reply_to(message, "Your account has not been deleted.")
     else:
         bot.reply_to(message, "Invalid input. Please enter 'yes' or 'no'.")
+
+
+@bot.message_handler(func=lambda message: True)
+def handle_unknown_text(message):
+    try:
+        bot.reply_to(message, "Sorry, I don't understand this command or text. Take a kitty instead. Try /help")
+
+        response = requests.get("https://api.thecatapi.com/v1/images/search")
+        if response.status_code == 200:
+            cat_data = response.json()
+            cat_image_url = cat_data[0]["url"]
+
+            bot.send_photo(message.chat.id, cat_image_url)
+        else:
+            bot.reply_to(message, "Sorry, I couldn't fetch a cat image right now. Try again later.")
+
+    except Exception as e:
+        bot.reply_to(message, f"An error occurred while fetching the cat image: {str(e)}")
 
 
 if __name__ == "__main__":
